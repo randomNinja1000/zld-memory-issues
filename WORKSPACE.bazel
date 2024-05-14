@@ -48,7 +48,7 @@ load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure")
 
 llvm_configure(
     name = "llvm-project",
-    targets = ["AArch64"],
+    targets = ["AArch64", "X86"],
 )
 
 #################################################################################
