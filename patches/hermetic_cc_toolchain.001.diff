@@ -1,0 +1,34 @@
+diff --git a/toolchain/defs.bzl b/toolchain/defs.bzl
+index f6f613e..50c3462 100644
+--- a/toolchain/defs.bzl
++++ b/toolchain/defs.bzl
+@@ -89,14 +89,17 @@ def _quote(s):
+     return "'" + s.replace("'", "'\\''") + "'"
+ 
+ def _zig_repository_impl(repository_ctx):
+-    arch = repository_ctx.os.arch
++    arch = repository_ctx.attr.exec_arch
++    if arch == "":
++        arch = repository_ctx.os.arch
+     if arch == "amd64":
+         arch = "x86_64"
+ 
+-    os = repository_ctx.os.name.lower()
++    os = repository_ctx.attr.exec_os
++    if os == "":
++        os = repository_ctx.os.name.lower()
+     if os.startswith("mac os"):
+         os = "macos"
+-
+     if os.startswith("windows"):
+         os = "windows"
+ 
+@@ -230,6 +233,8 @@ zig_repository = repository_rule(
+         "host_platform_sha256": attr.string_dict(),
+         "url_formats": attr.string_list(allow_empty = False),
+         "host_platform_ext": attr.string_dict(),
++        "exec_arch": attr.string(),
++        "exec_os": attr.string(),
+     },
+     environ = ["HERMETIC_CC_TOOLCHAIN_CACHE_PREFIX"],
+     implementation = _zig_repository_impl,

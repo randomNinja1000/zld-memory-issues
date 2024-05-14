@@ -1,0 +1,202 @@
+diff --git a/compiler-rt/test/fuzzer/CompressedTest.cpp b/compiler-rt/test/fuzzer/CompressedTest.cpp
+index ec969cbae9de..9bd3a9df08c5 100644
+--- a/compiler-rt/test/fuzzer/CompressedTest.cpp
++++ b/compiler-rt/test/fuzzer/CompressedTest.cpp
+@@ -4,11 +4,11 @@
+ 
+ // A fuzz target that consumes a Zlib-compressed input.
+ // This test verifies that we can find this bug with a custom mutator.
++#include "zlib.h"
+ #include <cstddef>
+ #include <cstdint>
+ #include <cstdio>
+ #include <cstdlib>
+-#include <zlib.h>
+ 
+ // The fuzz target.
+ // Uncompress the data, crash on input starting with "FU".
+@@ -18,17 +18,17 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+   size_t UncompressedLen = sizeof(Uncompressed);
+   if (Z_OK != uncompress(Uncompressed, &UncompressedLen, Data, Size))
+     return 0;
+-  if (UncompressedLen < 2) return 0;
++  if (UncompressedLen < 2)
++    return 0;
+   if (Uncompressed[0] == 'F' && Uncompressed[1] == 'U')
+-    abort();  // Boom
++    abort(); // Boom
+   return 0;
+ }
+ 
+ #ifdef CUSTOM_MUTATOR
+ 
+ // Forward-declare the libFuzzer's mutator callback.
+-extern "C" size_t
+-LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize);
++extern "C" size_t LLVMFuzzerMutate(uint8_t *Data, size_t Size, size_t MaxSize);
+ 
+ // The custom mutator:
+ //   * deserialize the data (in this case, uncompress).
+@@ -58,4 +58,4 @@ extern "C" size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
+   return CompressedLen;
+ }
+ 
+-#endif  // CUSTOM_MUTATOR
++#endif // CUSTOM_MUTATOR
+diff --git a/lld/ELF/OutputSections.cpp b/lld/ELF/OutputSections.cpp
+index 9c667241360f..b022c52dc6ad 100644
+--- a/lld/ELF/OutputSections.cpp
++++ b/lld/ELF/OutputSections.cpp
+@@ -24,10 +24,10 @@
+ #if LLVM_ENABLE_ZLIB
+ // Avoid introducing max as a macro from Windows headers.
+ #define NOMINMAX
+-#include <zlib.h>
++#include "zlib.h"
+ #endif
+ #if LLVM_ENABLE_ZSTD
+-#include <zstd.h>
++#include "zstd.h"
+ #endif
+ 
+ using namespace llvm;
+diff --git a/lldb/source/Plugins/Process/gdb-remote/GDBRemoteCommunication.cpp b/lldb/source/Plugins/Process/gdb-remote/GDBRemoteCommunication.cpp
+index 8a47eed3d7cb..85869d352756 100644
+--- a/lldb/source/Plugins/Process/gdb-remote/GDBRemoteCommunication.cpp
++++ b/lldb/source/Plugins/Process/gdb-remote/GDBRemoteCommunication.cpp
+@@ -48,7 +48,7 @@
+ #endif
+ 
+ #if LLVM_ENABLE_ZLIB
+-#include <zlib.h>
++#include "zlib.h"
+ #endif
+ 
+ using namespace lldb;
+@@ -76,7 +76,7 @@ GDBRemoteCommunication::~GDBRemoteCommunication() {
+ 
+ #if defined(HAVE_LIBCOMPRESSION)
+   if (m_decompression_scratch)
+-    free (m_decompression_scratch);
++    free(m_decompression_scratch);
+ #endif
+ }
+ 
+@@ -152,7 +152,8 @@ GDBRemoteCommunication::SendRawPacketNoLock(llvm::StringRef packet,
+     ConnectionStatus status = eConnectionStatusSuccess;
+     const char *packet_data = packet.data();
+     const size_t packet_length = packet.size();
+-    size_t bytes_written = WriteAll(packet_data, packet_length, status, nullptr);
++    size_t bytes_written =
++        WriteAll(packet_data, packet_length, status, nullptr);
+     if (log) {
+       size_t binary_start_offset = 0;
+       if (strncmp(packet_data, "$vFile:pwrite:", strlen("$vFile:pwrite:")) ==
+@@ -528,22 +529,27 @@ bool GDBRemoteCommunication::DecompressPacket() {
+ 
+     if (m_decompression_scratch_type != m_compression_type) {
+       if (m_decompression_scratch) {
+-        free (m_decompression_scratch);
++        free(m_decompression_scratch);
+         m_decompression_scratch = nullptr;
+       }
+       size_t scratchbuf_size = 0;
+       if (m_compression_type == CompressionType::LZFSE)
+-        scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_LZFSE);
++        scratchbuf_size =
++            compression_decode_scratch_buffer_size(COMPRESSION_LZFSE);
+       else if (m_compression_type == CompressionType::LZ4)
+-        scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_LZ4_RAW);
++        scratchbuf_size =
++            compression_decode_scratch_buffer_size(COMPRESSION_LZ4_RAW);
+       else if (m_compression_type == CompressionType::ZlibDeflate)
+-        scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_ZLIB);
++        scratchbuf_size =
++            compression_decode_scratch_buffer_size(COMPRESSION_ZLIB);
+       else if (m_compression_type == CompressionType::LZMA)
+-        scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_LZMA);
++        scratchbuf_size =
++            compression_decode_scratch_buffer_size(COMPRESSION_LZMA);
+       else if (m_compression_type == CompressionType::LZFSE)
+-        scratchbuf_size = compression_decode_scratch_buffer_size (COMPRESSION_LZFSE);
++        scratchbuf_size =
++            compression_decode_scratch_buffer_size(COMPRESSION_LZFSE);
+       if (scratchbuf_size > 0) {
+-        m_decompression_scratch = (void*) malloc (scratchbuf_size);
++        m_decompression_scratch = (void *)malloc(scratchbuf_size);
+         m_decompression_scratch_type = m_compression_type;
+       }
+     }
+diff --git a/lldb/source/Plugins/SymbolFile/CTF/SymbolFileCTF.cpp b/lldb/source/Plugins/SymbolFile/CTF/SymbolFileCTF.cpp
+index 386ba44c5ea6..fdc01538c7b4 100644
+--- a/lldb/source/Plugins/SymbolFile/CTF/SymbolFileCTF.cpp
++++ b/lldb/source/Plugins/SymbolFile/CTF/SymbolFileCTF.cpp
+@@ -37,7 +37,7 @@
+ #include <optional>
+ 
+ #if LLVM_ENABLE_ZLIB
+-#include <zlib.h>
++#include "zlib.h"
+ #endif
+ 
+ using namespace llvm;
+@@ -294,25 +294,25 @@ llvm::StringRef SymbolFileCTF::ReadString(lldb::offset_t str_offset) const {
+ /// Return the integer display representation encoded in the given data.
+ static uint32_t GetEncoding(uint32_t data) {
+   // Mask bits 24–31.
+-  return ((data)&0xff000000) >> 24;
++  return ((data) & 0xff000000) >> 24;
+ }
+ 
+ /// Return the integral width in bits encoded in the given data.
+ static uint32_t GetBits(uint32_t data) {
+   // Mask bits 0-15.
+-  return (data)&0x0000ffff;
++  return (data) & 0x0000ffff;
+ }
+ 
+ /// Return the type kind encoded in the given data.
+ uint32_t GetKind(uint32_t data) {
+   // Mask bits 26–31.
+-  return ((data)&0xf800) >> 11;
++  return ((data) & 0xf800) >> 11;
+ }
+ 
+ /// Return the variable length encoded in the given data.
+ uint32_t GetVLen(uint32_t data) {
+   // Mask bits 0–24.
+-  return (data)&0x3ff;
++  return (data) & 0x3ff;
+ }
+ 
+ static uint32_t GetBytes(uint32_t bits) { return bits / sizeof(unsigned); }
+diff --git a/llvm/lib/Support/CRC.cpp b/llvm/lib/Support/CRC.cpp
+index 2bc668beed32..3091ab675fc0 100644
+--- a/llvm/lib/Support/CRC.cpp
++++ b/llvm/lib/Support/CRC.cpp
+@@ -83,7 +83,7 @@ uint32_t llvm::crc32(uint32_t CRC, ArrayRef<uint8_t> Data) {
+ 
+ #else
+ 
+-#include <zlib.h>
++#include "zlib.h"
+ uint32_t llvm::crc32(uint32_t CRC, ArrayRef<uint8_t> Data) {
+   // Zlib's crc32() only takes a 32-bit length, so we have to iterate for larger
+   // sizes. One could use crc32_z() instead, but that's a recent (2017) addition
+diff --git a/llvm/lib/Support/Compression.cpp b/llvm/lib/Support/Compression.cpp
+index badaf68ab59c..da1ce0bf804b 100644
+--- a/llvm/lib/Support/Compression.cpp
++++ b/llvm/lib/Support/Compression.cpp
+@@ -18,10 +18,10 @@
+ #include "llvm/Support/Error.h"
+ #include "llvm/Support/ErrorHandling.h"
+ #if LLVM_ENABLE_ZLIB
+-#include <zlib.h>
++#include "zlib.h"
+ #endif
+ #if LLVM_ENABLE_ZSTD
+-#include <zstd.h>
++#include "zstd.h"
+ #endif
+ 
+ using namespace llvm;

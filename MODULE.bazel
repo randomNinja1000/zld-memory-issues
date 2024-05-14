@@ -1,0 +1,37 @@
+module(name = "buildbuddy-trial")
+
+# Skylib is a library of Starlark functions for manipulating collections,
+# file paths, and various other data types in the domain of Bazel build rules.
+bazel_dep(name = "bazel_skylib", version = "1.5.0")
+
+# This repository houses all canonical constraint_setting()s, constraint_value()s
+# and platform()s that are universally useful across languages and Bazel projects.
+bazel_dep(name = "platforms", version = "0.0.8")
+
+# This repository contains a Starlark implementation of C++ rules in Bazel.
+bazel_dep(name = "rules_cc", version = "0.0.9")
+
+# This repository contains a Starlark implementation for packaging and other useful libs.
+bazel_dep(name = "aspect_bazel_lib", version = "2.5.3")
+
+################################################################################
+# rules_python
+################################################################################
+# Aspect provides wrappers around python_rules, when activated and loaded from a
+# BUILD.bazel, this overrides py_library, py_binary and py_test.
+# Aspect makes python truly hermetic (see https://github.com/aspect-build/rules_py#differences).
+# This currently seems needed in third_party/bazel_tools/lit/glob_lit_tests.bzl.
+bazel_dep(name = "aspect_rules_py", version = "0.7.3")
+bazel_dep(name = "rules_python", dev_dependency = True, version = "0.31.0")
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    configure_coverage_tool = True,
+    python_version = "3.11",
+)
+# TODO: avoid this and get from pycross if possible.
+use_repo(python, "python_3_11")
+use_repo(python, "python_3_11_host")
+
+# See: https://bazel.build/rules/lib/globals/module#register_toolchains
+# TODO: avoid this and get from pycross if possible.
+register_toolchains("@python_3_11_host//:all",)

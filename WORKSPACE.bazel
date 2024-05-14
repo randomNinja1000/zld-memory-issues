@@ -1,0 +1,71 @@
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
+
+#################################################################################
+# Zig-based hermetic_cc_toolchain
+#################################################################################
+HERMETIC_CC_TOOLCHAIN_VERSION = "v3.0.1"
+
+http_archive(
+    name = "hermetic_cc_toolchain",
+    sha256 = "3bc6ec127622fdceb4129cb06b6f7ab098c4d539124dde96a6318e7c32a53f7a",
+    urls = [
+        "https://mirror.bazel.build/github.com/uber/hermetic_cc_toolchain/releases/download/{0}/hermetic_cc_toolchain-{0}.tar.gz".format(HERMETIC_CC_TOOLCHAIN_VERSION),
+        "https://github.com/uber/hermetic_cc_toolchain/releases/download/{0}/hermetic_cc_toolchain-{0}.tar.gz".format(HERMETIC_CC_TOOLCHAIN_VERSION),
+    ],
+)
+
+load("@hermetic_cc_toolchain//toolchain:defs.bzl", zig_toolchains = "toolchains")
+
+zig_toolchains()
+
+register_toolchains(
+    "@zig_sdk//toolchain:darwin_amd64",
+    "@zig_sdk//toolchain:darwin_arm64",
+)
+
+#################################################################################
+# LLVM @HEAD
+#################################################################################
+new_git_repository(
+    name = "llvm-raw",
+    remote = "https://github.com/llvm/llvm-project",
+    build_file_content = "#",
+    commit = "6eb9e214b3cb06fc31f2547275e746761c3e41de",
+    patch_tool = "patch",
+    patch_args = ["-p1"],
+    patches = [
+        "//:patches/zig.001.diff",
+        "//:patches/zlib-ng.001.diff",
+    ],
+)
+
+load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure")
+
+llvm_configure(
+    name = "llvm-project",
+    targets = ["AArch64"],
+)
+
+#################################################################################
+# LLVM dependencies
+#################################################################################
+http_archive(
+    name = "llvm_zlib",
+    build_file = "@llvm-raw//utils/bazel/third_party_build:zlib-ng.BUILD",
+    sha256 = "e36bb346c00472a1f9ff2a0a4643e590a254be6379da7cddd9daeb9a7f296731",
+    strip_prefix = "zlib-ng-2.0.7",
+    urls = [
+        "https://github.com/zlib-ng/zlib-ng/archive/refs/tags/2.0.7.zip",
+    ],
+)
+
+http_archive(
+    name = "llvm_zstd",
+    build_file = "@llvm-raw//utils/bazel/third_party_build:zstd.BUILD",
+    sha256 = "7c42d56fac126929a6a85dbc73ff1db2411d04f104fae9bdea51305663a83fd0",
+    strip_prefix = "zstd-1.5.2",
+    urls = [
+        "https://github.com/facebook/zstd/releases/download/v1.5.2/zstd-1.5.2.tar.gz"
+    ],
+)
