@@ -25,4 +25,12 @@ sys     0m3.580s
 
 By comparison, the same on a linux box takes:
 ```
+real	0m1.234s
+user	0m2.152s
+sys	0m3.098s
 ```
+
+This gets significantly worse in other cases with larger static libraries to a 
+point where a powerful M3 runs OOM and shuts down.
+
+Fixes would be greatly appreciated!
